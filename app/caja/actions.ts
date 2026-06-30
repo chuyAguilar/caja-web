@@ -1,33 +1,54 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { supabase, hoyISO } from "@/lib/supabase";
+import { redirect } from "next/navigation";
+import { supabase, hoyISO, normalizarTelefono } from "@/lib/supabase";
 
 function refresh() {
   revalidatePath("/caja");
   revalidatePath("/dueno");
 }
 
+// Traduce errores comunes de Postgres a mensajes claros
+function traducirError(msg: string): string {
+  if (/duplicate key|unique/i.test(msg) && /telefono/i.test(msg))
+    return "Ya existe un cliente con ese teléfono. Usa otro número o déjalo vacío.";
+  if (/duplicate key|unique/i.test(msg))
+    return "Ese registro ya existe (dato duplicado).";
+  return msg;
+}
+
+function fallar(msg: string): never {
+  redirect("/caja?error=" + encodeURIComponent(traducirError(msg)));
+}
+
 // Crear cliente + su primera inscripcion
 export async function crearCliente(formData: FormData) {
   const nombre = String(formData.get("nombre") || "").trim();
-  const telefono = String(formData.get("telefono") || "").trim() || null;
+  const { telefono, error: telErr } = normalizarTelefono(String(formData.get("telefono") || ""));
   const edadRaw = String(formData.get("edad") || "").trim();
   const edad = edadRaw ? Number(edadRaw) : null;
-  if (!nombre) return;
+  if (!nombre) fallar("El nombre es obligatorio.");
+  if (telErr) fallar(telErr);
 
   const { data: cli, error } = await supabase
     .from("clientes")
-    .insert({ nombre, telefono, edad })
+    .insert({
+      nombre,
+      telefono,
+      edad,
+      fotos_entregadas: formData.get("fotos_entregadas") === "on",
+      certificado_medico: formData.get("certificado_medico") === "on",
+    })
     .select("id")
     .single();
-  if (error || !cli) throw new Error(error?.message || "No se pudo crear el cliente");
+  if (error || !cli) fallar(error?.message || "No se pudo crear el cliente.");
 
   const dia = String(formData.get("dia") || "");
   const hora = String(formData.get("hora") || "");
   if (dia && hora) {
-    await supabase.from("inscripciones").insert({
-      cliente_id: cli.id,
+    const { error: e2 } = await supabase.from("inscripciones").insert({
+      cliente_id: cli!.id,
       dia,
       hora,
       carril: String(formData.get("carril") || "").trim() || null,
@@ -35,21 +56,28 @@ export async function crearCliente(formData: FormData) {
       precio: Number(formData.get("precio") || 700),
       estatus: "activa",
     });
+    if (e2) fallar("Cliente creado, pero la inscripción falló: " + e2.message);
   }
   refresh();
+  redirect("/caja?ok=Cliente+creado");
 }
 
 export async function actualizarCliente(formData: FormData) {
   const id = Number(formData.get("id"));
   const edadRaw = String(formData.get("edad") || "").trim();
-  await supabase
+  const { telefono, error: telErr } = normalizarTelefono(String(formData.get("telefono") || ""));
+  if (telErr) fallar(telErr);
+  const { error } = await supabase
     .from("clientes")
     .update({
       nombre: String(formData.get("nombre") || "").trim(),
-      telefono: String(formData.get("telefono") || "").trim() || null,
+      telefono,
       edad: edadRaw ? Number(edadRaw) : null,
+      fotos_entregadas: formData.get("fotos_entregadas") === "on",
+      certificado_medico: formData.get("certificado_medico") === "on",
     })
     .eq("id", id);
+  if (error) fallar(error.message);
   refresh();
 }
 
@@ -59,7 +87,7 @@ export async function eliminarCliente(formData: FormData) {
 }
 
 export async function crearInscripcion(formData: FormData) {
-  await supabase.from("inscripciones").insert({
+  const { error } = await supabase.from("inscripciones").insert({
     cliente_id: Number(formData.get("cliente_id")),
     dia: String(formData.get("dia") || ""),
     hora: String(formData.get("hora") || ""),
@@ -68,6 +96,7 @@ export async function crearInscripcion(formData: FormData) {
     precio: Number(formData.get("precio") || 700),
     estatus: "activa",
   });
+  if (error) fallar(error.message);
   refresh();
 }
 
@@ -84,7 +113,7 @@ export async function registrarPago(formData: FormData) {
   const metodo = String(formData.get("metodo") || "efectivo");
   if (!inscripcion_id || !mes) return;
 
-  await supabase.from("pagos").upsert(
+  const { error } = await supabase.from("pagos").upsert(
     {
       inscripcion_id,
       mes,
@@ -96,6 +125,7 @@ export async function registrarPago(formData: FormData) {
     },
     { onConflict: "inscripcion_id,mes" }
   );
+  if (error) fallar(error.message);
   refresh();
 }
 

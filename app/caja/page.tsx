@@ -1,4 +1,4 @@
-import { supabase, mesActual, fmtMXN, DIAS, CATEGORIAS, METODOS } from "@/lib/supabase";
+import { supabase, mesActual, fmtMXN, DIAS, CATEGORIAS, METODOS, HORAS, CARRILES, PRECIOS } from "@/lib/supabase";
 import ConfirmButton from "@/components/ConfirmButton";
 import {
   crearCliente,
@@ -16,7 +16,9 @@ const input = "w-full rounded border border-slate-300 px-2 py-1 text-sm";
 const btn = "rounded bg-sky-600 px-3 py-1 text-sm font-medium text-white hover:bg-sky-700";
 const btnGhost = "rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-50";
 
-export default async function CajaPage() {
+type CajaProps = { searchParams: { error?: string; ok?: string } };
+
+export default async function CajaPage({ searchParams }: CajaProps) {
   const mes = mesActual();
 
   const { data: clientes } = await supabase
@@ -32,6 +34,16 @@ export default async function CajaPage() {
 
   return (
     <div className="space-y-6">
+      {searchParams?.error && (
+        <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700">
+          ⚠️ {searchParams.error}
+        </div>
+      )}
+      {searchParams?.ok && (
+        <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
+          ✓ {searchParams.ok}
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Caja</h1>
         <div className="rounded-lg bg-emerald-600 px-4 py-2 text-white">
@@ -50,8 +62,8 @@ export default async function CajaPage() {
           <label className="text-sm">Nombre*
             <input name="nombre" required className={input} />
           </label>
-          <label className="text-sm">Teléfono (WhatsApp)
-            <input name="telefono" placeholder="5217712345678" className={input} />
+          <label className="text-sm">Teléfono (10 dígitos)
+            <input name="telefono" placeholder="7712345678" className={input} />
           </label>
           <label className="text-sm">Edad
             <input name="edad" type="number" min="1" className={input} />
@@ -64,7 +76,10 @@ export default async function CajaPage() {
             </select>
           </label>
           <label className="text-sm">Hora
-            <input name="hora" type="time" className={input} />
+            <select name="hora" className={input}>
+              <option value="">—</option>
+              {HORAS.map((h) => <option key={h.value} value={h.value}>{h.label}</option>)}
+            </select>
           </label>
           <label className="text-sm">Categoría
             <select name="categoria" className={input}>
@@ -72,12 +87,23 @@ export default async function CajaPage() {
             </select>
           </label>
           <label className="text-sm">Carril
-            <input name="carril" placeholder="2A" className={input} />
+            <select name="carril" className={input}>
+              <option value="">(sin carril)</option>
+              {CARRILES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
           </label>
           <label className="text-sm">Precio
-            <input name="precio" type="number" defaultValue={700} className={input} />
+            <select name="precio" className={input}>
+              {PRECIOS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+            </select>
           </label>
-          <div className="flex items-end">
+          <div className="sm:col-span-3 flex flex-wrap items-center gap-4 pt-1">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="fotos_entregadas" /> Fotos entregadas
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="certificado_medico" /> Certificado médico
+            </label>
             <button className={btn}>Guardar cliente</button>
           </div>
         </form>
@@ -89,18 +115,26 @@ export default async function CajaPage() {
         {lista.map((c) => (
           <div key={c.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             {/* Datos del cliente (editable) */}
-            <form action={actualizarCliente} className="flex flex-wrap items-end gap-2">
-              <input type="hidden" name="id" value={c.id} />
-              <label className="text-xs">Nombre
-                <input name="nombre" defaultValue={c.nombre} className={input} />
-              </label>
-              <label className="text-xs">Teléfono
-                <input name="telefono" defaultValue={c.telefono || ""} className={input} />
-              </label>
-              <label className="text-xs">Edad
-                <input name="edad" type="number" defaultValue={c.edad ?? ""} className={`${input} w-20`} />
-              </label>
-              <button className={btnGhost}>Guardar</button>
+            <div className="flex flex-wrap items-end gap-2">
+              <form action={actualizarCliente} className="flex flex-wrap items-end gap-2">
+                <input type="hidden" name="id" value={c.id} />
+                <label className="text-xs">Nombre
+                  <input name="nombre" defaultValue={c.nombre} className={input} />
+                </label>
+                <label className="text-xs">Teléfono
+                  <input name="telefono" defaultValue={c.telefono || ""} className={input} />
+                </label>
+                <label className="text-xs">Edad
+                  <input name="edad" type="number" defaultValue={c.edad ?? ""} className={`${input} w-20`} />
+                </label>
+                <label className="flex items-center gap-1 text-xs" title="Entregó 2 fotos tamaño infantil">
+                  <input type="checkbox" name="fotos_entregadas" defaultChecked={!!c.fotos_entregadas} /> Fotos
+                </label>
+                <label className="flex items-center gap-1 text-xs" title="Entregó certificado médico de natación">
+                  <input type="checkbox" name="certificado_medico" defaultChecked={!!c.certificado_medico} /> Cert. médico
+                </label>
+                <button className={btnGhost}>Guardar</button>
+              </form>
               <ConfirmButton
                 action={eliminarCliente}
                 message={`¿Eliminar a ${c.nombre} y todas sus inscripciones?`}
@@ -109,11 +143,7 @@ export default async function CajaPage() {
               >
                 Eliminar
               </ConfirmButton>
-              <span className="ml-auto text-xs text-slate-400">
-                {c.fotos_entregadas ? "📷 fotos ✓" : "📷 fotos ✗"} ·{" "}
-                {c.certificado_medico ? "🩺 cert ✓" : "🩺 cert ✗"}
-              </span>
-            </form>
+            </div>
 
             {/* Inscripciones */}
             <div className="mt-3 space-y-2">
@@ -169,12 +199,20 @@ export default async function CajaPage() {
                     <option value="">Día</option>
                     {DIAS.map((d) => <option key={d} value={d}>{d}</option>)}
                   </select>
-                  <input name="hora" type="time" required className={input} />
+                  <select name="hora" required className={input}>
+                    <option value="">Hora</option>
+                    {HORAS.map((h) => <option key={h.value} value={h.value}>{h.label}</option>)}
+                  </select>
                   <select name="categoria" className={input}>
                     {CATEGORIAS.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
                   </select>
-                  <input name="carril" placeholder="carril" className={`${input} w-20`} />
-                  <input name="precio" type="number" defaultValue={700} className={`${input} w-24`} />
+                  <select name="carril" className={input}>
+                    <option value="">(sin carril)</option>
+                    {CARRILES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <select name="precio" className={input}>
+                    {PRECIOS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                  </select>
                   <button className={btnGhost}>Agregar</button>
                 </form>
               </details>
