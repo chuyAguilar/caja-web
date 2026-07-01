@@ -55,8 +55,8 @@ export default async function CajaPage({ searchParams }: CajaProps) {
         </div>
       </div>
 
-      {/* Nuevo cliente */}
-      <details className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      {/* Nuevo cliente (key = lista.length: al crear se limpia y colapsa) */}
+      <details key={`nc-${lista.length}`} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <summary className="cursor-pointer font-semibold">➕ Nuevo cliente</summary>
         <form action={crearCliente} className="mt-3 grid gap-3 sm:grid-cols-3">
           <label className="text-sm">Nombre*

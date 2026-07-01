@@ -79,6 +79,7 @@ export async function actualizarCliente(formData: FormData) {
     .eq("id", id);
   if (error) fallar(error.message);
   refresh();
+  redirect("/caja?ok=Cliente+actualizado");
 }
 
 export async function eliminarCliente(formData: FormData) {

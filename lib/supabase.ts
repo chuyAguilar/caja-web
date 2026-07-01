@@ -9,8 +9,11 @@ export const supabase = createClient(
   { auth: { persistSession: false } }
 );
 
-export const mesActual = () => new Date().toISOString().slice(0, 7); // 'YYYY-MM'
-export const hoyISO = () => new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
+// Fecha en zona horaria de México (evita que a fin de mes UTC salte de mes).
+// en-CA formatea como 'YYYY-MM-DD'.
+export const hoyISO = () =>
+  new Date().toLocaleDateString("en-CA", { timeZone: "America/Mexico_City" });
+export const mesActual = () => hoyISO().slice(0, 7); // 'YYYY-MM'
 
 export const DIAS = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"];
 export const CATEGORIAS = ["4-6", "7-13", "14+"];
