@@ -1,5 +1,5 @@
 import { supabase, fmtMXN } from "@/lib/supabase";
-import ConfirmButton from "@/components/ConfirmButton";
+import RecolectarForm from "@/components/RecolectarForm";
 import { recolectarCaja } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -34,20 +34,7 @@ export default async function DuenoPage() {
           {caja?.num_pagos || 0} pagos · corte abierto desde {fecha(caja?.abierto_en)}
         </div>
 
-        <form action={recolectarCaja} className="mt-4 flex flex-wrap items-end gap-2">
-          <input
-            name="notas"
-            placeholder="Nota (opcional): p. ej. recolectado por transferencia"
-            className="min-w-[220px] flex-1 rounded border border-white/40 bg-white/10 px-3 py-2 text-sm text-white placeholder:text-white/60"
-          />
-          <ConfirmButton
-            action={recolectarCaja}
-            message={`¿Marcar como recolectado ${fmtMXN(total)}? Esto cierra el corte y reinicia el contador.`}
-            className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-sky-700 hover:bg-sky-50"
-          >
-            Marcar como recolectado
-          </ConfirmButton>
-        </form>
+        <RecolectarForm action={recolectarCaja} total={fmtMXN(total)} disabled={total <= 0} />
         <p className="mt-2 text-xs opacity-70">
           La nota se aplica al confirmar con el botón. Al recolectar, el monto queda en el historial y la caja vuelve a $0.
         </p>

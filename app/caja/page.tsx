@@ -1,5 +1,6 @@
 import { supabase, mesActual, fmtMXN, DIAS, CATEGORIAS, METODOS, HORAS, CARRILES, PRECIOS } from "@/lib/supabase";
 import ConfirmButton from "@/components/ConfirmButton";
+import Toast from "@/components/Toast";
 import {
   crearCliente,
   actualizarCliente,
@@ -34,16 +35,7 @@ export default async function CajaPage({ searchParams }: CajaProps) {
 
   return (
     <div className="space-y-6">
-      {searchParams?.error && (
-        <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700">
-          ⚠️ {searchParams.error}
-        </div>
-      )}
-      {searchParams?.ok && (
-        <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
-          ✓ {searchParams.ok}
-        </div>
-      )}
+      <Toast ok={searchParams?.ok} error={searchParams?.error} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Caja</h1>
         <div className="rounded-lg bg-emerald-600 px-4 py-2 text-white">
